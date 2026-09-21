@@ -69,26 +69,43 @@
     window.openDrawer(head + meta + window.caseDetailHtml(c));
   };
 
-  /* 卡片列表：把某条主线的案例渲染成网格 */
-  window.renderCaseGrid = function (container, track) {
+  /* 卡片列表：把某条主线的案例渲染成网格
+   * track: 'agent' | 'k8s' | 'eng' | null(全部)
+   * opts.onlyOther: 只显示非主线仓库（其它大仓库的单条 PR）
+   */
+  window.renderCaseGrid = function (container, track, opts) {
     if (!container) return;
-    const cases = ((window.LESSONS && window.LESSONS.cases) || []).filter((c) => !track || c.track === track);
+    const FOCUS = ["The-PR-Agent/pr-agent", "k8sgpt-ai/k8sgpt"];
+    const onlyOther = !!(opts && opts.onlyOther);
+    const cases = ((window.LESSONS && window.LESSONS.cases) || []).filter((c) => {
+      if (track && c.track !== track) return false;
+      if (onlyOther && FOCUS.indexOf(c.repo) !== -1) return false;
+      return true;
+    });
+    const skin = { k8s: ["track-k8s", "sky"], eng: ["track-eng", "amber"] };
     container.innerHTML = cases
-      .map(
-        (c) =>
-          '<article class="card ' + (c.track === "k8s" ? "track-k8s" : "track-agent") + ' reveal" data-case-card="' + c.id + '">' +
-          '<span class="pill ' + (c.track === "k8s" ? "sky" : "violet") + '"><span class="dotmark"></span>' +
+      .map((c) => {
+        const [cls, pill] = skin[c.track] || ["track-agent", "violet"];
+        const state =
+          c.state === "merged"
+            ? '<span class="pill mint">merged</span>'
+            : c.state === "open"
+            ? '<span class="pill amber">open</span>'
+            : '<span class="pill rose">closed</span>';
+        return (
+          '<article class="card ' + cls + ' reveal" data-case-card="' + c.id + '">' +
+          '<span class="pill ' + pill + '"><span class="dotmark"></span>' +
           window.escapeHtml(c.theme) + "</span>" +
           '<h3 style="margin:12px 0 8px">' + window.escapeHtml(c.title) + "</h3>" +
           "<p>" + window.escapeHtml(c.takeaway) + "</p>" +
           '<div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">' +
-          '<span style="font-family:var(--mono);font-size:12px;color:var(--text-faint)">#' + c.number + "</span>" +
-          (c.state === "merged"
-            ? '<span class="pill mint">merged</span>'
-            : '<span class="pill amber">' + c.state + "</span>") +
+          '<span style="font-family:var(--mono);font-size:12px;color:var(--text-faint)">' +
+          window.escapeHtml(c.repo.split("/")[1] || c.repo) + " #" + c.number + "</span>" +
+          state +
           '<span class="pill" style="margin-left:auto">展开 →</span>' +
           "</div></article>"
-      )
+        );
+      })
       .join("");
 
     container.querySelectorAll("[data-case-card]").forEach((el) => {

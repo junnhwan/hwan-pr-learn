@@ -10,6 +10,7 @@
     theme: "all",
     sort: "date",
     onlyCase: false,
+    trk: "all",
     q: "",
   };
 
@@ -41,6 +42,10 @@
     if (state.theme !== "all") {
       const c = CASE_MAP[caseKey(p.repo, p.number)];
       if (!c || c.theme !== state.theme) return false;
+    }
+    if (state.trk !== "all") {
+      const c = CASE_MAP[caseKey(p.repo, p.number)];
+      if (!c || c.track !== state.trk) return false;
     }
     if (state.q) {
       const hay = (p.title + " " + p.repo + " " + (p.files || []).join(" ") + " " + (p.summary || "")).toLowerCase();
@@ -170,6 +175,7 @@
     chipGroup("state", "state");
     chipGroup("kind", "kind");
     chipGroup("sort", "sort");
+    chipGroup("trk", "trk");
 
     const caseChip = document.querySelector("[data-case]");
     if (caseChip) {

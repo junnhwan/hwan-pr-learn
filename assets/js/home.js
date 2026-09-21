@@ -89,6 +89,10 @@
     if (demo && window.LESSONS && window.LESSONS.players.k8sDeployment) {
       window.createPlayer(demo, window.LESSONS.players.k8sDeployment);
     }
+    const other = document.getElementById("other-cases");
+    if (other && window.renderCaseGrid) {
+      window.renderCaseGrid(other, null, { onlyOther: true });
+    }
     window.loadPRData().then((data) => {
       renderStats(data);
       renderRepoBars(data);

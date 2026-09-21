@@ -518,6 +518,9 @@ code {
 .track-k8s {
   --accent: var(--sky);
 }
+.track-eng {
+  --accent: var(--amber);
+}
 .pill {
   display: inline-flex;
   align-items: center;

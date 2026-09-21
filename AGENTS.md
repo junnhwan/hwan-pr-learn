@@ -47,8 +47,19 @@ scripts/build_pr_data.py gh CLI → assets/data/prs.json
 - 如果发现它们又出现在 `assets/data/prs.json` 或页面上，说明排除逻辑被绕过，应修复脚本并重新生成。
 - 若将来还有类似的"非学习性质"仓库，加入同一个 `IGNORE_REPOS` 集合，并同步更新本表格。
 
-其余小仓库（如 `kprompt/kprompt`、`junnhwan/codepilot_test_repo`、`LeoninCS/GoClub` 等）
-保留在数据中，但**默认不写案例**；只有主线仓库（PR-Agent / k8sgpt）才进入学习主线。
+## 主线之外：其它大仓库的单条 PR 也要留着
+
+在 ag2、HolmesGPT、OpenViking、kueue、kubevela、kthena、k0smotron、kprompt、
+go-zero、updatecli、osv-scanner 这类大仓库上，通常每个仓库只提了一条 PR，**但它们很有价值**：
+同一类思维模型（缓存键缺维度、重试的副作用边界、收紧校验的兼容性）在不同语言/项目里的复现，
+恰恰说明这条规则可迁移。
+
+- 这些案例的 `track`：`agent` / `k8s` / `eng`（工程：Go 反射、CLI dry-run、条件语义等）。
+- 首页有专门的「其它大仓库里的单条 PR」区块渲染 `repo` 不在主线集合中的案例。
+- 不要因为它们"只有一条"就删掉或忽略。
+
+真正不需要关注的是上表中的课内/校内仓库，以及 `junnhwan/codepilot_test_repo` 这类自测仓库
+（保留在数据中但默认不写案例）。
 
 ## 内容规范
 
