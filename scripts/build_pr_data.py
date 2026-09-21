@@ -57,6 +57,14 @@ FOCUS = {
     },
 }
 
+# 忽略名单：这些仓库不是学习对象，完全不进入本站数据。
+# - Paper-Analysis-Viewer：校内实验室"打工"仓库（含其 fork），与本站两条学习主线无关，
+#   详见仓库根目录 AGENTS.md。任何统计、筛选、案例、文档都不要包含它。
+IGNORE_REPOS = {
+    "liuzhishun/Paper-Analysis-Viewer",
+    "junnhwan/Paper-Analysis-Viewer",
+}
+
 K8S_REPOS = {
     "k8sgpt-ai/k8sgpt",
     "volcano-sh/kthena",
@@ -138,7 +146,11 @@ def discover_repos(author: str) -> list[str]:
         ]
     )
     counter = Counter(pr["repository"]["nameWithOwner"] for pr in prs)
-    return [repo for repo, _ in counter.most_common()]
+    kept = [repo for repo, _ in counter.most_common() if repo not in IGNORE_REPOS]
+    skipped = [(repo, n) for repo, n in counter.most_common() if repo in IGNORE_REPOS]
+    for repo, n in skipped:
+        print(f"  (ignored) {repo}: {n} — 见 IGNORE_REPOS / AGENTS.md")
+    return kept
 
 
 def fetch_repo(repo: str, author: str) -> list[dict]:

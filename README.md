@@ -57,3 +57,5 @@ python3 scripts/build_pr_data.py
 
 - `prs.json` 只包含公开的 GitHub PR 元数据（标题、状态、diff 统计、文件列表、描述摘要）。
 - 学习卡片中的代码片段均取自对应 PR 的公开 diff；流程类代码会标注为简化示意。
+- 校内实验室项目 `Paper-Analysis-Viewer` 属于噪音数据，已在 `scripts/build_pr_data.py`
+  的 `IGNORE_REPOS` 中排除，不进入本站任何统计与内容（详见 `AGENTS.md`）。
