@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PR 图谱 · hwan-pr-learn</title>
+<meta name="description" content="按仓库、状态、类型与知识主题检索全部开源 PR，点开可看真实 diff 与学习卡片。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<div class="aurora"></div>
+<div class="aurora-grid"></div>
+<div class="scroll-progress"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>hwan-pr-learn</a>
+    <button class="nav-toggle" aria-label="菜单">菜单</button>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">首页</a>
+      <a class="nav-link" href="prs.html">PR 图谱</a>
+      <a class="nav-link" href="agent.html">Agent 篇</a>
+      <a class="nav-link" href="k8s.html">Kubernetes 篇</a>
+      <a class="nav-link" href="lab.html">代码实验室</a>
+      <a class="nav-link" href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section style="padding-top:54px">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">PR 图谱</div>
+      <h1 style="font-size:clamp(1.7rem,3.4vw,2.6rem)">全部 PR，按知识点重新组织</h1>
+      <p class="lede">
+        数据由 <code>scripts/build_pr_data.py</code> 用 <code>gh</code> 抓取生成（<span id="gen-at">—</span>）。
+        带 <span class="pill violet">学习卡片</span> 标记的条目点开后能看到真实 diff 与知识点拆解。
+      </p>
+    </div>
+
+    <div class="filters reveal">
+      <span class="chip on" data-scope="focus">主线仓库</span>
+      <span class="chip" data-scope="all">全部仓库</span>
+      <span style="width:1px;height:22px;background:var(--line)"></span>
+      <span class="chip on" data-state="all">全部状态</span>
+      <span class="chip" data-state="merged">merged</span>
+      <span class="chip" data-state="open">open</span>
+      <span class="chip" data-state="closed">closed</span>
+      <span style="width:1px;height:22px;background:var(--line)"></span>
+      <span class="chip on" data-kind="all">全部类型</span>
+      <span class="chip" data-kind="修复">fix</span>
+      <span class="chip" data-kind="特性">feat</span>
+      <span class="chip" data-kind="性能">perf</span>
+      <span class="chip" data-kind="文档">docs</span>
+      <select class="chip" id="theme" style="appearance:none;cursor:pointer;background:rgba(255,255,255,.05);color:var(--text-dim)">
+        <option value="all">全部知识主题</option>
+      </select>
+      <label class="search">
+        <span style="color:var(--text-faint);font-size:13px">搜索</span>
+        <input id="q" type="search" placeholder="标题 / 文件 / 关键词" />
+      </label>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <div id="count" style="font-size:13.5px;color:var(--text-faint)"></div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <span style="font-size:12.5px;color:var(--text-faint)">排序</span>
+        <span class="chip on" data-sort="date">最新</span>
+        <span class="chip" data-sort="size">改动量</span>
+        <span class="chip" data-case="1">仅看有学习卡片</span>
+      </div>
+    </div>
+
+    <div class="pr-list" id="list"></div>
+    <div id="empty" style="display:none;padding:40px 0;text-align:center;color:var(--text-faint)">没有匹配的 PR，换个条件试试。</div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>数据快照来自 GitHub API · 重新生成：<code>python3 scripts/build_pr_data.py</code></div>
+  </div>
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script src="assets/js/player.js"></script>
+<script src="assets/data/lessons.js"></script>
+<script src="assets/js/case.js"></script>
+<script src="assets/js/prs.js"></script>
+</body>
+</html>

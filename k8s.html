@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kubernetes 篇 · k8sgpt 与集群语义</title>
+<meta name="description" content="k8sgpt 的 Analyzer 体系动画、Deployment/Job/RBAC/Event/S3 分页等 Kubernetes 语义拆解，以及真实 PR 案例。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body data-track="k8s">
+<div class="aurora"></div>
+<div class="aurora-grid"></div>
+<div class="scroll-progress"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>hwan-pr-learn</a>
+    <button class="nav-toggle" aria-label="菜单">菜单</button>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">首页</a>
+      <a class="nav-link" href="prs.html">PR 图谱</a>
+      <a class="nav-link" href="agent.html">Agent 篇</a>
+      <a class="nav-link" href="k8s.html">Kubernetes 篇</a>
+      <a class="nav-link" href="lab.html">代码实验室</a>
+      <a class="nav-link" href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section style="padding-top:54px">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">Kubernetes 篇 · k8sgpt-ai/k8sgpt</div>
+      <h1 style="font-size:clamp(1.8rem,3.6vw,2.7rem)">集群状态到底<span class="grad">该怎么读</span></h1>
+      <p class="lede">
+        k8sgpt 把集群里的信号翻译成人话：先由一堆 Analyzer 找出「不健康的对象」，再交给 AI 解释。
+        写 Analyzer 的过程，本质上是在追问 Kubernetes 的语义：<b>这个条件是谁写的？这份 status 是第几代 spec 的？这个引用指向哪儿？</b>
+      </p>
+      <div class="hero-stats" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:26px">
+        <div class="stat"><b id="stat-prs">—</b><span>提交 PR</span></div>
+        <div class="stat"><b id="stat-merged">—</b><span>已合并</span></div>
+        <div class="stat"><b id="stat-cases">—</b><span>精选案例</span></div>
+      </div>
+    </div>
+
+    <div class="grid g2 reveal" style="align-items:start">
+      <div>
+        <div class="sec-kicker">模块地图（点击看职责）</div>
+        <div class="diagram" data-map style="--accent:var(--sky);min-height:0">
+          <div class="p-row">
+            <div class="p-node" data-mod="cmd" data-title="cmd/ + pkg/analysis 编排层"
+                 data-desc="CLI 与 server 入口；NewAnalysis() 建 k8s client 与缓存，RunAnalysis() 用 semaphore + WaitGroup 并发跑 analyzer，最后汇总 Results。">cmd · analysis<b>编排</b></div>
+            <div class="p-node" data-mod="analyzer" data-title="pkg/analyzer 插件表"
+                 data-desc="coreAnalyzerMap（默认跑）+ additionalAnalyzerMap（按需开）+ integration 注入。每个 analyzer 实现 Analyze(common.Analyzer) ([]Result, error)。">analyzer<b>诊断插件</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="common" data-title="pkg/common 数据结构"
+                 data-desc="Failure{Text, KubernetesDoc, Sensitive[]}：人话描述 + 官方字段链接 + 需要脱敏的片段；Result 按 Kind/Name 聚合。">common<b>Failure 模型</b></div>
+            <div class="p-node" data-mod="ai" data-title="pkg/ai 解释层"
+                 data-desc="OpenAI / Azure / Bedrock / Gemini / 自定义 REST 的统一接口；多条失败合并成一次请求以省 token，脱敏后再送出。">ai<b>AI 解释</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="cache" data-title="pkg/cache 缓存"
+                 data-desc="本地文件 / Azure Blob / S3 三种实现，按失败文本哈希缓存 AI 解释。S3 列举必须翻页，否则清理与命中判断都会失真。">cache<b>解释缓存</b></div>
+            <div class="p-node" data-mod="kubernetes" data-title="pkg/kubernetes 客户端"
+                 data-desc="封装 kubeconfig/kubecontext 与 scheme（含 Gateway API、KEDA、Kyverno 等 CRD），analyzer 通过它 List/Get 各类对象。">kubernetes<b>集群访问</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="integration" data-title="pkg/integration 扩展"
+                 data-desc="第三方集成可以把自己的 analyzer 注册进 mergedAnalyzerMap —— 一张 map 就是一个插件系统。">integration<b>第三方扩展</b></div>
+            <div class="p-node" data-mod="server" data-title="pkg/server + MCP"
+                 data-desc="serve 模式把分析结果以服务形式暴露，并支持 MCP 等集成方式，供其它工具消费。">server<b>服务化输出</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="player-note" data-map-out style="border:1px solid var(--line);border-radius:var(--radius);min-height:220px"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">主干链路</div>
+      <h2>一次 <code>k8sgpt analyze</code> 发生了什么</h2>
+    </div>
+    <div class="reveal" data-player="k8sAnalyze"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">动画 · 最容易误判的对象</div>
+      <h2>Deployment：数 Pod 是不够的</h2>
+      <p class="lede">滚动更新的中间态、卡死的进度、陈旧的 status——三种情形在副本计数里长得一模一样。</p>
+    </div>
+    <div class="reveal" data-player="k8sDeployment"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid g2">
+      <div class="reveal">
+        <div class="sec-kicker">动画 · 终态</div>
+        <h2>Job 跑完了还是失败了？</h2>
+        <div data-player="k8sJob"></div>
+      </div>
+      <div class="reveal reveal-d1">
+        <div class="sec-kicker">动画 · RBAC</div>
+        <h2>一条绑定的权限该去哪儿查</h2>
+        <div data-player="k8sRbac"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">动画 · 分页</div>
+      <h2>一次只给你 1000 个 key 的列举接口</h2>
+    </div>
+    <div class="reveal" data-player="k8sS3"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">速查表</div>
+      <h2>Kubernetes 语义速查</h2>
+      <p class="lede">写诊断逻辑时最容易踩的坑，以及对应的真实 PR。</p>
+    </div>
+    <div class="reveal" style="overflow-x:auto">
+      <table class="table">
+        <thead>
+          <tr><th>概念</th><th>该看什么</th><th>常见误判</th><th>相关 PR</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>conditions</b></td>
+            <td>按 <code>type</code> 查，不按下标取；关注 <code>status</code> 与 <code>reason</code></td>
+            <td>只看 <code>Conditions[0]</code>（顺序不保证）</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1737" target="_blank" rel="noopener">#1737</a> · <a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1740" target="_blank" rel="noopener">#1740</a></td>
+          </tr>
+          <tr>
+            <td><b>status 新鲜度</b></td>
+            <td><code>metadata.generation</code> vs <code>status.observedGeneration</code></td>
+            <td>把"正在收敛"当成故障</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1743" target="_blank" rel="noopener">#1743</a></td>
+          </tr>
+          <tr>
+            <td><b>终态 vs 计数</b></td>
+            <td>Job 看 <code>Complete / SuccessCriteriaMet</code>；RS 看 <code>ReplicaFailure</code></td>
+            <td><code>status.failed &gt; 0</code> 就报失败</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1725" target="_blank" rel="noopener">#1725</a> · <a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1750" target="_blank" rel="noopener">#1750</a></td>
+          </tr>
+          <tr>
+            <td><b>命名空间作用域</b></td>
+            <td>用<b>对象自身</b>的 namespace 查询，而不是用户传入的</td>
+            <td>全局分析时 namespace 为空</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1747" target="_blank" rel="noopener">#1747</a> · <a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1753" target="_blank" rel="noopener">#1753</a></td>
+          </tr>
+          <tr>
+            <td><b>Event 关联</b></td>
+            <td><code>involvedObject</code> 的 kind + name（最好 uid），且 Event 与对象同 namespace</td>
+            <td>同名不同 Kind 串味</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1753" target="_blank" rel="noopener">#1753</a></td>
+          </tr>
+          <tr>
+            <td><b>引用扫描</b></td>
+            <td>containers + initContainers + volumes + projected sources</td>
+            <td>漏掉一类挂载点 → 误报"未使用"</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1722" target="_blank" rel="noopener">#1722</a> · <a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1741" target="_blank" rel="noopener">#1741</a></td>
+          </tr>
+          <tr>
+            <td><b>多态引用</b></td>
+            <td>看到 <code>Kind</code> 字段就要分支（RoleRef / paramRef / deviceClassName）</td>
+            <td>只处理最熟悉的那一种</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1755" target="_blank" rel="noopener">#1755</a> · <a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1768" target="_blank" rel="noopener">#1768</a></td>
+          </tr>
+          <tr>
+            <td><b>有状态序号</b></td>
+            <td><code>spec.ordinals.start</code> 决定起始序号，Pod 名 = <code>$(name)-$(ordinal)</code></td>
+            <td>假设从 0 开始</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1759" target="_blank" rel="noopener">#1759</a></td>
+          </tr>
+          <tr>
+            <td><b>列举分页</b></td>
+            <td>S3 <code>IsTruncated/ContinuationToken</code>；k8s List <code>continue</code></td>
+            <td>只取第一页</td>
+            <td><a href="https://github.com/k8sgpt-ai/k8sgpt/pull/1760" target="_blank" rel="noopener">#1760</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">案例清单</div>
+      <h2>Kubernetes 篇的 PR 拆解（点击展开）</h2>
+    </div>
+    <div class="grid g2" id="cases"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>k8sgpt 是 <a href="https://github.com/k8sgpt-ai/k8sgpt" target="_blank" rel="noopener">k8sgpt-ai/k8sgpt</a> 的项目成果，本页仅作学习复盘。</div>
+  </div>
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script src="assets/js/player.js"></script>
+<script src="assets/data/lessons.js"></script>
+<script src="assets/js/case.js"></script>
+<script src="assets/js/track.js"></script>
+<script>
+  window.loadPRData().then(function (d) {
+    var repo = "k8sgpt-ai/k8sgpt";
+    var prs = d.prs.filter(function (p) { return p.repo === repo; });
+    document.getElementById("stat-prs").textContent = prs.length;
+    document.getElementById("stat-merged").textContent = prs.filter(function (p) { return p.state === "merged"; }).length;
+    document.getElementById("stat-cases").textContent =
+      window.LESSONS.cases.filter(function (c) { return c.track === "k8s"; }).length;
+  });
+</script>
+</body>
+</html>

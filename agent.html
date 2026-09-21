@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent 篇 · PR-Agent 架构与工程知识点</title>
+<meta name="description" content="PR-Agent 的模块地图、一次 /review 的完整生命周期动画、并发与回退、token 预算，以及 20+ 个真实 PR 案例拆解。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body data-track="agent">
+<div class="aurora"></div>
+<div class="aurora-grid"></div>
+<div class="scroll-progress"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>hwan-pr-learn</a>
+    <button class="nav-toggle" aria-label="菜单">菜单</button>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">首页</a>
+      <a class="nav-link" href="prs.html">PR 图谱</a>
+      <a class="nav-link" href="agent.html">Agent 篇</a>
+      <a class="nav-link" href="k8s.html">Kubernetes 篇</a>
+      <a class="nav-link" href="lab.html">代码实验室</a>
+      <a class="nav-link" href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section style="padding-top:54px">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">Agent 篇 · The-PR-Agent/pr-agent</div>
+      <h1 style="font-size:clamp(1.8rem,3.6vw,2.7rem)">把 LLM 能力做成<span class="grad">可靠服务</span>的工程骨架</h1>
+      <p class="lede">
+        PR-Agent 是一个跑在多个 Git 平台上的 AI 代码评审 Agent。它的难点不在提示词，而在
+        <b>入口适配、命令解析、预算控制、并发与回退、状态收敛</b>。
+        下面先给模块地图，再跟着一次 <code>/review</code> 走完整条链路。
+      </p>
+      <div class="hero-stats" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:26px">
+        <div class="stat"><b id="stat-prs">—</b><span>提交 PR</span></div>
+        <div class="stat"><b id="stat-merged">—</b><span>已合并</span></div>
+        <div class="stat"><b id="stat-cases">—</b><span>精选案例</span></div>
+      </div>
+    </div>
+
+    <div class="grid g2 reveal" style="align-items:start">
+      <div>
+        <div class="sec-kicker">模块地图（点击看职责）</div>
+        <div class="diagram" data-map style="--accent:var(--violet);min-height:0">
+          <div class="p-row">
+            <div class="p-node" data-mod="servers" data-title="servers/ 入口层"
+                 data-desc="FastAPI/uvicorn 接收 GitHub、GitLab、Bitbucket(Server)、Azure DevOps、Gitea、Gerrit 的事件；handle_request() 按 event + action 分流，真正的分析交给 BackgroundTasks，先返回 200。">servers/<b>多平台入口</b></div>
+            <div class="p-node" data-mod="agent" data-title="agent/ 分派层"
+                 data-desc="PRAgent 把命令映射到 tools/ 下的类（command2class 注册表）；prepare_command() 负责命令与参数解析；请求作用域设置（深拷贝）在这里建立。">agent/<b>命令分派</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="tools" data-title="tools/ 能力层"
+                 data-desc="review / describe / improve / ask / ask_line / add_docs … 每个工具都是同一套骨架：准备上下文 → 请求模型 → 解析输出 → 发布；取消与失败都要收敛到终态。">tools/<b>评审能力</b></div>
+            <div class="p-node" data-mod="algo" data-title="algo/ 算法层"
+                 data-desc="get_pr_diff、TokenHandler 预算、retry_with_fallback_models 回退链、repo_context 缓存、skills_loader、patch 解析与分块。">algo/<b>diff 与预算</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="ai" data-title="ai_handlers/ 模型层"
+                 data-desc="基于 litellm 统一多家模型；负责 token 计数、图片处理、重试与自省。同步网络调用必须 asyncio.to_thread，且必须有超时。">ai_handlers/<b>模型调用</b></div>
+            <div class="p-node" data-mod="providers" data-title="git_providers/ 适配层"
+                 data-desc="把各平台的 diff/评论/reaction 语义对齐到统一模型（FilePatchInfo）。平台差异（MOVE vs RENAME、GitLab overflow、Azure 返回 None）都在这一层消化。">git_providers/<b>平台适配</b></div>
+          </div>
+          <div class="p-row">
+            <div class="p-node" data-mod="settings" data-title="settings/ 配置与提示词"
+                 data-desc="configuration.toml 是单一真相源；各命令的 prompt 是 Jinja2 模板，StrictUndefined 让缺失变量立刻报错。skills 与 repo context 也在这里注入。">settings/<b>TOML + Prompt</b></div>
+            <div class="p-node" data-mod="mosaico" data-title="mosaico/ 协议与观测"
+                 data-desc="A2A（Agent2Agent）任务模型：Task / artifact / status；Langfuse span 做 tracing。观测设施必须零副作用，关闭失败只告警。">mosaico/<b>A2A + 观测</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="player-note" data-map-out style="border:1px solid var(--line);border-radius:var(--radius);min-height:220px"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">主干链路</div>
+      <h2>一次 /review 的完整生命周期</h2>
+      <p class="lede">点播放，或直接用下方的分段按钮跳到某一步：左边是真实模块，右边是简化后的调用序列。</p>
+    </div>
+    <div class="reveal" data-player="agentLifecycle"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">工程原则</div>
+      <h2>从这些 PR 里抽象出来的六条规则</h2>
+    </div>
+    <div class="grid g3">
+      <div class="card track-agent reveal">
+        <div class="card-tag">输入</div>
+        <h3>输入契约要无损</h3>
+        <p>命令解析一旦丢掉「是否被引用」这类信息，下游无法补救。解析层保留语义，入口逻辑收敛成单一函数。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2813</span> <span class="pill violet">#3011</span></div>
+      </div>
+      <div class="card track-agent reveal reveal-d1">
+        <div class="card-tag">预算</div>
+        <h3>上下文是硬约束</h3>
+        <p>system + 上下文 + 历史 + 输出预留四段记账；换模型要换 tokenizer；历史超预算就从最早的轮次裁。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2862</span> <span class="pill violet">#3324</span></div>
+      </div>
+      <div class="card track-agent reveal reveal-d2">
+        <div class="card-tag">并发</div>
+        <h3>失败是局部事件</h3>
+        <p>gather 默认 fail-fast 会连坐成功结果；用 return_exceptions 分离 Exception 与 BaseException，再按最小粒度重试。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2829</span> <span class="pill violet">#3324</span></div>
+      </div>
+      <div class="card track-agent reveal">
+        <div class="card-tag">取消</div>
+        <h3>取消必须能传播</h3>
+        <p>裸 except 会吞掉 CancelledError；等待别人的地方要有唤醒兜底；取消是终态，要清理用户可见的进度态。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2832</span> <span class="pill violet">#2827</span> <span class="pill violet">#2850</span></div>
+      </div>
+      <div class="card track-agent reveal reveal-d1">
+        <div class="card-tag">状态</div>
+        <h3>临时改全局要还原</h3>
+        <p>单例配置是全局可变状态：缓存键必须覆盖全部输入维度，临时写入必须 try/finally 配对还原。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2929</span> <span class="pill violet">#2856</span> <span class="pill violet">#2857</span></div>
+      </div>
+      <div class="card track-agent reveal reveal-d2">
+        <div class="card-tag">观测</div>
+        <h3>观测零副作用</h3>
+        <p>tracing / 埋点失败只告警不改变业务结果；BaseException 要透传；异步任务先登记 Task 才能被取消。</p>
+        <div style="margin-top:10px"><span class="pill violet">#2865</span> <span class="pill violet">#3166</span> <span class="pill violet">#3171</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">动画 · 并发与降级</div>
+      <h2>大 PR 分块后的失败与恢复</h2>
+    </div>
+    <div class="reveal" data-player="agentChunking"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">动画 · 预算</div>
+      <h2>上下文预算怎么被吃满</h2>
+    </div>
+    <div class="reveal" data-player="tokenBudget"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">案例清单</div>
+      <h2>Agent 篇的 PR 拆解（点击展开）</h2>
+      <p class="lede">每张卡片包含：现象 → 根因 → 修法 → 真实 diff 片段 → 可迁移经验。</p>
+    </div>
+    <div class="grid g2" id="cases"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>PR-Agent 是 <a href="https://github.com/The-PR-Agent/pr-agent" target="_blank" rel="noopener">The-PR-Agent/pr-agent</a> 的项目成果，本页仅作学习复盘。</div>
+  </div>
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script src="assets/js/player.js"></script>
+<script src="assets/data/lessons.js"></script>
+<script src="assets/js/case.js"></script>
+<script src="assets/js/track.js"></script>
+<script>
+  window.loadPRData().then(function (d) {
+    var repo = "The-PR-Agent/pr-agent";
+    var prs = d.prs.filter(function (p) { return p.repo === repo; });
+    document.getElementById("stat-prs").textContent = prs.length;
+    document.getElementById("stat-merged").textContent = prs.filter(function (p) { return p.state === "merged"; }).length;
+    document.getElementById("stat-cases").textContent =
+      window.LESSONS.cases.filter(function (c) { return c.track === "agent"; }).length;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hwan 的开源 PR 学习站 · 从 AI 写的补丁里学 Agent 与 Kubernetes</title>
+<meta name="description" content="把我在 PR-Agent 与 k8sgpt 上提交的 50+ 个 PR 拆成可交互的知识：架构动画、代码精读、Kubernetes 与 Agent 工程知识点。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<div class="aurora"></div>
+<div class="aurora-grid"></div>
+<div class="scroll-progress"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>hwan-pr-learn</a>
+    <button class="nav-toggle" aria-label="菜单">菜单</button>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">首页</a>
+      <a class="nav-link" href="prs.html">PR 图谱</a>
+      <a class="nav-link" href="agent.html">Agent 篇</a>
+      <a class="nav-link" href="k8s.html">Kubernetes 篇</a>
+      <a class="nav-link" href="lab.html">代码实验室</a>
+      <a class="nav-link" href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-badge">这些 PR 由 <b>AI 起草</b>，这个站用来把它们<b>变回知识</b></div>
+    <h1>读完 <span class="grad">50+ 个开源 PR</span>，<br />学懂 Agent 与 Kubernetes</h1>
+    <p class="hero-sub">
+      在 <b>PR-Agent</b> 与 <b>k8sgpt</b> 两个较大开源项目上，我提交了 50 个 PR（AI 帮我写代码，我负责选题、验证与复盘）。
+      这个站把每个补丁背后的<b>架构知识</b>、<b>工程原则</b>和<b>真实代码</b>拆出来，配上可播放的动画，方便反复回看。
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="agent.html">进入 Agent 篇</a>
+      <a class="btn btn-ghost" href="k8s.html">进入 Kubernetes 篇</a>
+      <a class="btn btn-ghost" href="prs.html">浏览全部 PR</a>
+    </div>
+
+    <div class="hero-flow" data-flow>
+      <div class="flow-row">
+        <div class="flow-node"><b>GitHub / GitLab 事件</b><small>webhook · review · push</small></div>
+        <span class="flow-wire"></span>
+        <div class="flow-node"><b>Server 分流</b><small>事件 × 动作矩阵</small></div>
+        <span class="flow-wire"></span>
+        <div class="flow-node"><b>Agent 分派</b><small>命令 → 工具类</small></div>
+        <span class="flow-wire"></span>
+        <div class="flow-node"><b>LLM 工具链</b><small>预算 / 分块 / 回退</small></div>
+        <span class="flow-wire"></span>
+        <div class="flow-node"><b>写回 PR</b><small>评论 · reaction · 覆盖率</small></div>
+      </div>
+    </div>
+
+    <div class="hero-stats" id="stats">
+      <div class="stat"><b data-count="0">0</b><span>合并的 PR</span></div>
+      <div class="stat"><b data-count="0">0</b><span>重点仓库</span></div>
+      <div class="stat"><b data-count="0">0</b><span>精选案例</span></div>
+      <div class="stat"><b data-count="0">0</b><span>知识点卡片</span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">为什么做这个站</div>
+      <h2>让「AI 写过的补丁」留下可复用的知识</h2>
+      <p class="lede">
+        AI 能在几分钟里写出一个补丁，但<b>价值不在补丁本身</b>，而在于它暴露出来的系统设计问题：
+        一个缓存键少了一个维度、一个裸 except 吞掉了取消信号、一个只看副本计数的诊断器漏掉了真正的故障。
+      </p>
+    </div>
+    <div class="grid g3">
+      <div class="card reveal">
+        <div class="card-tag">方法</div>
+        <h3>源码优先，不靠猜</h3>
+        <p>每个候选问题都在本地克隆里读完整调用链核实：同文件的兄弟方法怎么写的、SDK 到底返回什么、有没有现成守卫。结论要能被代码对照证明。</p>
+      </div>
+      <div class="card reveal reveal-d1">
+        <div class="card-tag">范围</div>
+        <h3>不止 PR 本身</h3>
+        <p>补丁只是入口。顺着它往上追架构（请求生命周期、插件注册表）、往下追原理（conditions 是谁写的、token 怎么算），才是真正的学习。</p>
+      </div>
+      <div class="card reveal reveal-d2">
+        <div class="card-tag">表达</div>
+        <h3>用动画讲结构</h3>
+        <p>并发失败、回退链、滚动更新这些有时间维度的行为，用静态文字很难讲清。这里用可播放的分步动画 + 代码高亮来讲。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">两条学习主线</div>
+      <h2>一个学 Agent 工程，一个学 Kubernetes</h2>
+    </div>
+    <div class="grid g2">
+      <a class="card track-agent reveal" href="agent.html" style="text-decoration:none;color:inherit">
+        <span class="pill violet"><span class="dotmark"></span>Agent 篇 · PR-Agent</span>
+        <h3 style="margin-top:12px">AI 代码评审 Agent 的工程骨架</h3>
+        <p>
+          多平台 webhook 入口、命令解析、工具注册表、prompt 模板、token 预算、并发与回退、可观测性与 A2A 协议。
+          学的是「如何把一个 LLM 能力做成一个可靠的服务」。
+        </p>
+        <div class="hero-flow" style="margin-top:14px;padding:14px" data-flow>
+          <div class="flow-row">
+            <div class="flow-node"><b>webhook</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>命令解析</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>Tool</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>LLM</b></div>
+          </div>
+        </div>
+      </a>
+      <a class="card track-k8s reveal reveal-d1" href="k8s.html" style="text-decoration:none;color:inherit">
+        <span class="pill sky"><span class="dotmark"></span>Kubernetes 篇 · k8sgpt</span>
+        <h3 style="margin-top:12px">集群诊断器背后的 Kubernetes 语义</h3>
+        <p>
+          Analyzer 插件体系、conditions 由谁写入、status 的新鲜度、RBAC 绑定模型、命名空间作用域、准入控制与动态资源分配。
+          学的是「声明式系统的状态到底该怎么读」。
+        </p>
+        <div class="hero-flow" style="margin-top:14px;padding:14px" data-flow>
+          <div class="flow-row">
+            <div class="flow-node"><b>List 对象</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>Analyzer</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>Failure</b></div>
+            <span class="flow-wire"></span>
+            <div class="flow-node"><b>AI 解释</b></div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid g2" style="align-items:start">
+      <div class="reveal">
+        <div class="sec-kicker">学习路径</div>
+        <h2>从「能提 PR」到「能讲清为什么」</h2>
+        <p class="lede">这条路径是我在两个项目上反复走过的四步，每一步都比写补丁本身更花时间。</p>
+        <div class="timeline" style="margin-top:22px">
+          <div class="tl-item reveal">
+            <span class="tl-meta">STEP 01</span>
+            <h4>读懂仓库，找结构性缺口</h4>
+            <p>先摸清模块边界与约定（CONTRIBUTING、配置即真相源、插件注册方式），再在同文件里找「同一件事的另一种写法」——差异处常是 bug。</p>
+          </div>
+          <div class="tl-item reveal">
+            <span class="tl-meta">STEP 02</span>
+            <h4>把问题做成可复现的证据</h4>
+            <p>本地克隆 + 最小复现 + 兄弟方法对照表。Issue 里给得出「哪一行、为什么、怎么修」，维护者才会认可。</p>
+          </div>
+          <div class="tl-item reveal">
+            <span class="tl-meta">STEP 03</span>
+            <h4>写最小修复 + 单测</h4>
+            <p>一行守卫也好、一个分支也好：保持与既有写法一致，补上能失败的测试，配置类改动默认关闭。</p>
+          </div>
+          <div class="tl-item reveal">
+            <span class="tl-meta">STEP 04</span>
+            <h4>抽象成可迁移的知识</h4>
+            <p>问一句「这条规则还能用在哪」：缓存键要覆盖全部输入、BaseException 要透传、conditions 按 type 查……这才是学习站里的条目。</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-d1">
+        <div class="sec-kicker">数据切片</div>
+        <h2>PR 全景</h2>
+        <p class="lede">全部数据由 <code>scripts/build_pr_data.py</code> 通过 <code>gh</code> 抓取，随时可刷新。</p>
+        <div class="mini" style="margin-top:18px">
+          <div id="repo-bars"></div>
+        </div>
+        <div class="mini" style="margin-top:14px">
+          <div style="font-size:13px;color:var(--text-faint);margin-bottom:10px">最新动态（重点仓库）</div>
+          <div id="recent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">先试一个动画</div>
+      <h2>知识动画长什么样</h2>
+      <p class="lede">下面这段就是站内播放器的样子：左边示意图逐步点亮，右边代码同步高亮，下方给出这一步的讲解。</p>
+    </div>
+    <div class="reveal" id="demo-player"></div>
+    <div style="margin-top:14px" class="reveal">
+      <a class="btn btn-ghost" href="lab.html">去代码实验室看更多 →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      静态站点 · 无任何构建步骤 · 数据来自 <code>gh</code> CLI ·
+      <a href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">源码仓库</a>
+    </div>
+    <div style="margin-top:6px">页面内容仅用于个人学习复盘，PR 归属与链接均指向上游项目。</div>
+  </div>
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script src="assets/js/player.js"></script>
+<script src="assets/data/lessons.js"></script>
+<script src="assets/js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>代码实验室 · 逐行动画精读真实补丁</title>
+<meta name="description" content="把真实 PR 的 diff 做成可逐步播放的代码精读：命令解析、并发失败隔离、Deployment 条件、RBAC 绑定、S3 分页。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+<div class="aurora"></div>
+<div class="aurora-grid"></div>
+<div class="scroll-progress"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><span class="brand-dot"></span>hwan-pr-learn</a>
+    <button class="nav-toggle" aria-label="菜单">菜单</button>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">首页</a>
+      <a class="nav-link" href="prs.html">PR 图谱</a>
+      <a class="nav-link" href="agent.html">Agent 篇</a>
+      <a class="nav-link" href="k8s.html">Kubernetes 篇</a>
+      <a class="nav-link" href="lab.html">代码实验室</a>
+      <a class="nav-link" href="https://github.com/junnhwan/hwan-pr-learn" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<section style="padding-top:54px">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-kicker">代码实验室</div>
+      <h1 style="font-size:clamp(1.8rem,3.6vw,2.7rem)">逐行播放的<span class="grad">补丁精读</span></h1>
+      <p class="lede">
+        每个案例都是一段真实 diff：左边是状态示意图，右边是代码。按播放会自动推进，也可以用分段按钮逐步看。
+        代码里 <span class="pill mint">绿色</span> 行是新增，<span class="pill rose">红色</span> 行是被替换的旧写法。
+      </p>
+    </div>
+
+    <div class="filters reveal" data-tabs style="position:static">
+      <span class="chip on" data-tab="labCommand">命令解析 · #2813</span>
+      <span class="chip" data-tab="agentChunking">并发与部分失败 · #2829 / #3324</span>
+      <span class="chip" data-tab="k8sDeployment">Deployment 条件 · #1740 / #1743</span>
+      <span class="chip" data-tab="k8sRbac">RBAC 绑定 · #1755</span>
+      <span class="chip" data-tab="k8sJob">Job 终态 · #1725</span>
+      <span class="chip" data-tab="k8sS3">S3 分页 · #1760</span>
+      <span class="chip" data-tab="tokenBudget">上下文预算 · #2862</span>
+      <span class="chip" data-tab="agentLifecycle">请求生命周期</span>
+      <span class="chip" data-tab="k8sAnalyze">analyze 全链路</span>
+    </div>
+
+    <div class="reveal" data-tab-stage style="margin-top:18px"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid g2">
+      <div class="card reveal">
+        <div class="card-tag">怎么读</div>
+        <h3>三步阅读法</h3>
+        <p>
+          <b>① 先看现象</b>：这个改动要消除的具体错误行为是什么？<br />
+          <b>② 再看根因</b>：是契约理解错了、状态丢失了，还是作用域搞错了？<br />
+          <b>③ 最后抽象</b>：这条规则换个项目还能用在哪？
+        </p>
+      </div>
+      <div class="card reveal reveal-d1">
+        <div class="card-tag">怎么加</div>
+        <h3>加入自己的案例</h3>
+        <p>
+          编辑 <code>assets/data/lessons.js</code>，往 <code>cases</code> 里加一条（含 <code>repo / number / theme / problem / root / fix / knowledge / takeaway</code>），
+          PR 图谱页会自动给它打上「学习卡片」标记；想配动画就在 <code>players</code> 里加一份配置。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>所有代码片段均取自对应 PR 的真实 diff（节选），流程类代码会标注为简化示意。</div>
+  </div>
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script src="assets/js/player.js"></script>
+<script src="assets/data/lessons.js"></script>
+<script src="assets/js/case.js"></script>
+<script src="assets/js/track.js"></script>
+</body>
+</html>
