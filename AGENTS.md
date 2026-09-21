@@ -32,17 +32,22 @@ assets/data/lessons.js   手工维护：cases（案例）+ players（动画配�
 scripts/build_pr_data.py gh CLI → assets/data/prs.json
 ```
 
-## 铁律：不要理会校内实验室项目
+## 铁律：不要理会课内 / 校内"打工"项目
 
-**`Paper-Analysis-Viewer`（`liuzhishun/Paper-Analysis-Viewer` 及其 fork `junnhwan/Paper-Analysis-Viewer`）
-是给学校实验室"打工"的仓库，不是学习对象，属于噪音数据。**
+以下仓库是课内作业或校内实验室"打工"产物，**不是学习对象，属于噪音数据**：
 
-- 不要为它写案例、动画、知识点，也不要在任何统计、文案、图表中引用它。
+| 仓库 | 原因 |
+| --- | --- |
+| `liuzhishun/Paper-Analysis-Viewer`、`junnhwan/Paper-Analysis-Viewer` | 校内实验室打工仓库（含 fork） |
+| `Mmakit/makit` | 课内项目 |
+| `nightwalkerkkk123/Moments` | 课内项目 |
+
+- 不要为它们写案例、动画、知识点，也不要在任何统计、文案、图表中引用。
 - 数据层面已在 `scripts/build_pr_data.py` 的 `IGNORE_REPOS` 中排除；重新生成数据时不应被拉回来。
-- 如果发现它又出现在 `assets/data/prs.json` 或页面上，说明排除逻辑被绕过，应修复脚本并重新生成。
-- 若将来还有类似的"非学习性质"仓库，加入同一个 `IGNORE_REPOS` 集合，并同步更新本文件的说明。
+- 如果发现它们又出现在 `assets/data/prs.json` 或页面上，说明排除逻辑被绕过，应修复脚本并重新生成。
+- 若将来还有类似的"非学习性质"仓库，加入同一个 `IGNORE_REPOS` 集合，并同步更新本表格。
 
-其余小仓库（如 `Mmakit/makit`、`nightwalkerkkk123/Moments`、`junnhwan/codepilot_test_repo` 等）
+其余小仓库（如 `kprompt/kprompt`、`junnhwan/codepilot_test_repo`、`LeoninCS/GoClub` 等）
 保留在数据中，但**默认不写案例**；只有主线仓库（PR-Agent / k8sgpt）才进入学习主线。
 
 ## 内容规范
